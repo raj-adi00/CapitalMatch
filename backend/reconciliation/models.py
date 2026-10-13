@@ -80,6 +80,7 @@ class Transaction(models.Model):
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     bank_reference = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="needs_review")
+    reason = models.TextField(blank=True, null=True)
     
     class Meta:
         unique_together = ('organization', 'bank_reference')
