@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+
+# Environment variables
+.env
+
+# Node/React
+node_modules/
+dist/
+.DS_Store
