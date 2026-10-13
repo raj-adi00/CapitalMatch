@@ -53,6 +53,9 @@ class LineItem(models.Model):
             return 'funded'
         else:
             return 'partially_funded'
+
+    class Meta:
+        unique_together = ('capital_call', 'investor_entity')
     
 class Transaction(models.Model):
     TYPE_CHOICES = [
