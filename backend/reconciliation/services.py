@@ -1,6 +1,10 @@
 import re
+import csv
+import io
 from django.db.models import F
-from .models import LineItem, Match
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from .models import LineItem, Match, Transaction
 
 def normalize_name(name):
     """
@@ -91,3 +95,120 @@ def generate_matches_for_transaction(transaction):
         transaction.reason = "No matching reference or name/amount found."
 
     transaction.save(update_fields=['status', 'reason'])
+
+def process_csv_upload(file_obj, organization):
+    #Decode the file
+    decoded_file = file_obj.read().decode('utf-8-sig')
+    reader = csv.DictReader(io.StringIO(decoded_file))
+    
+    #Missing column rejection
+    required_cols = {'date', 'description', 'amount', 'type', 'reference'}
+    if not reader.fieldnames:
+        return {"error": "Empty file or invalid CSV.", "status": 400}
+        
+    headers = {col.strip().lower() for col in reader.fieldnames if col}
+    if not required_cols.issubset(headers):
+        return {"error": "Missing required columns.", "status": 400}
+
+    valid_rows = []
+    errors = []
+    duplicates_count = 0
+    
+    #Pre-fetch existing references
+    existing_refs = set(Transaction.objects.filter(
+        organization=organization
+    ).values_list('bank_reference', flat=True))
+    
+    seen_refs_in_file = set()
+    
+    line_number = 1 
+    
+    for row in reader:
+        line_number += 1
+        
+        clean_row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+        
+        date_str = clean_row.get('date', '')
+        normalized_date = date_str.replace('/', '-').replace('.', '-')
+        desc_str = clean_row.get('description', '')
+        amt_str = clean_row.get('amount', '')
+        type_str = clean_row.get('type', '').lower()
+        ref_str = clean_row.get('reference', '')
+        
+        #Validation checks
+        if not desc_str:
+            errors.append({"line": line_number, "message": "Description is required."})
+            continue
+        if not ref_str:
+            errors.append({"line": line_number, "message": "Reference is required."})
+            continue
+            
+        try:
+            parsed_date = datetime.strptime(normalized_date, '%Y-%m-%d').date()
+        except ValueError:
+            errors.append({"line": line_number, "message": f"Invalid date format: {date_str}. Must be YYYY-MM-DD."})
+            continue
+            
+        if type_str not in ('credit', 'debit'):
+            errors.append({"line": line_number, "message": f"Invalid type: {type_str}. Must be credit or debit."})
+            continue
+            
+        try:
+            amount_val = Decimal(amt_str.replace(',', ''))
+        except InvalidOperation:
+            errors.append({"line": line_number, "message": f"Invalid amount: {amt_str}."})
+            continue
+            
+        if amount_val == Decimal('0'):
+            errors.append({"line": line_number, "message": "Amount cannot be zero."})
+            continue
+        
+        if type_str != 'credit' and type_str != 'debit':
+            errors.append({"line": line_number, "message": f"Invalid type: {type_str}. Must be credit or debit."})
+            continue
+            
+        if type_str == 'credit' and amount_val <= 0:
+            errors.append({"line": line_number, "message": "Credits must be positive."})
+            continue
+            
+        if type_str == 'debit' and amount_val >= 0:
+            errors.append({"line": line_number, "message": "Debits must be negative."})
+            continue
+            
+        #Duplicate Reference Check
+        if ref_str in existing_refs or ref_str in seen_refs_in_file:
+            duplicates_count += 1
+            errors.append({"line": line_number, "message": f"Duplicate reference: {ref_str}"})
+            continue
+            
+        seen_refs_in_file.add(ref_str)
+        
+        status = 'ignored' if type_str == 'debit' else 'needs_review'
+        reason = 'Debit transaction ignored.' if type_str == 'debit' else ''
+        
+        valid_rows.append(Transaction(
+            organization=organization,
+            date=parsed_date,
+            description=desc_str,
+            amount=amount_val,
+            type=type_str,
+            bank_reference=ref_str,
+            status=status,
+            reason=reason
+        ))
+    
+    if valid_rows:
+        created_txns = Transaction.objects.bulk_create(valid_rows)
+        
+        for txn in created_txns:
+            if txn.type == 'credit':
+                generate_matches_for_transaction(txn)
+                
+    return {
+        "status": 200,
+        "data": {
+            "imported": len(valid_rows),
+            "duplicates": duplicates_count,
+            "errors": errors,
+        }
+    }
