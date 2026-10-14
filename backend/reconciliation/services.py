@@ -64,7 +64,7 @@ def generate_matches_for_transaction(transaction):
                 Match(transaction=transaction, line_item=li, reason="Multiple reference matches", status='proposed')
                 for li in ref_matches
             ])
-            transaction.status = 'needs_review'
+            transaction.status = 'suggested'
             transaction.reason = "Multiple references found."
         
         transaction.save(update_fields=['status', 'reason'])
@@ -88,7 +88,7 @@ def generate_matches_for_transaction(transaction):
             Match(transaction=transaction, line_item=li, reason="Multiple name matches", status='proposed')
             for li in name_matches
         ])
-        transaction.status = 'needs_review'
+        transaction.status = 'suggested'
         transaction.reason = "Multiple name and amount matches found."
     else:
         transaction.status = 'needs_review'
