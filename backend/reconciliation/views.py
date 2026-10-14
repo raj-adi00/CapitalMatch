@@ -8,6 +8,12 @@ from rest_framework.exceptions import ValidationError
 from .serializers import LineItemSerializer, TransactionSerializer, OrganizationSerializer
 from .services import process_csv_upload
 from .models import Organization, LineItem, Transaction, Match
+from rest_framework.pagination import PageNumberPagination
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class TransactionUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -48,6 +54,7 @@ class LineItemListView(generics.ListAPIView):
 
 class TransactionListView(generics.ListAPIView):
     serializer_class = TransactionSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         org_slug = self.request.headers.get('X-Organization')
@@ -57,9 +64,15 @@ class TransactionListView(generics.ListAPIView):
         
         organization = get_object_or_404(Organization,slug=org_slug)
         
-        return Transaction.objects.filter(
+        queryset = Transaction.objects.filter(
             organization=organization
-        ).prefetch_related('matches', 'matches__line_item').order_by('-date', '-id')          
+        ).prefetch_related('matches', 'matches__line_item').order_by('-date', '-id')
+        
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        
+        return queryset          
 
 class ApproveMatchView(APIView):
     def post(self, request, match_id):
