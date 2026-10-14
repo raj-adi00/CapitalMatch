@@ -20,7 +20,7 @@ class MatchSerializer(serializers.ModelSerializer):
         fields = ['id', 'line_item', 'status', 'reason']
 
 class TransactionSerializer(serializers.ModelSerializer):
-    matches = MatchSerializer(source='match_set', many=True, read_only=True)
+    matches = MatchSerializer(many=True, read_only=True)
     
     class Meta:
         model = Transaction

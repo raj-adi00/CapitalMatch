@@ -59,7 +59,7 @@ class TransactionListView(generics.ListAPIView):
         
         return Transaction.objects.filter(
             organization=organization
-        ).prefetch_related('match_set', 'match_set__line_item').order_by('-date', '-id')          
+        ).prefetch_related('matches', 'matches__line_item').order_by('-date', '-id')          
 
 class ApproveMatchView(APIView):
     def post(self, request, match_id):
