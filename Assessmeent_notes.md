@@ -38,8 +38,19 @@ python manage.py test
 ```
 
 ## Environment Variables(.env.example)
+
+### Frontend
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+### Backend
+```env
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_PORT=
 ```
 
 ## App Name, Data Model & API Endpoints
