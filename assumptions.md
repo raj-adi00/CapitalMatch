@@ -11,5 +11,3 @@
 
 ## Add Ons
 * Pagination and filters
-* Deployed version
-* Airtale table
