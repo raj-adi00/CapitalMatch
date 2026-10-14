@@ -5,7 +5,7 @@ from django.db import transaction as db_transaction
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from .serializers import LineItemSerializer, TransactionSerializer
+from .serializers import LineItemSerializer, TransactionSerializer, OrganizationSerializer
 from .services import process_csv_upload
 from .models import Organization, LineItem, Transaction, Match
 
@@ -143,3 +143,7 @@ class RejectMatchView(APIView):
                 match.transaction.save(update_fields=['status', 'reason'])
 
         return Response({"message": "Match rejected successfully.", "status": 200})
+
+class OrganizationListView(generics.ListAPIView):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import LineItem, Transaction, Match
+from .models import LineItem, Transaction, Match, Organization
 
 class LineItemSerializer(serializers.ModelSerializer):
     amount_remaining = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
@@ -28,3 +28,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             'id', 'date', 'description', 'amount', 'type', 
             'bank_reference', 'status', 'reason', 'matches'
         ]
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = ['id', 'slug', 'name']
