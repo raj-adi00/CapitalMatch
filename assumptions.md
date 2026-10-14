@@ -8,3 +8,8 @@
 
 ### Seed demo data Command
 * *To seed demo data*: `python manage.py seed_demo`
+
+## Add Ons
+* Pagination and filters
+* Deployed version
+* Airtale table

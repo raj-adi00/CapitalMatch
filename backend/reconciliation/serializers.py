@@ -32,4 +32,4 @@ class TransactionSerializer(serializers.ModelSerializer):
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = ['id', 'slug', 'name']
+        fields = ['slug', 'name']

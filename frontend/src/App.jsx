@@ -1,122 +1,137 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import Cookies from "js-cookie";
+import api from "./api";
+import "./App.css";
+import { Toaster, toast } from "react-hot-toast";
+import UploadSection from "./components/UploadSection";
+import Dashboard from "./components/Dashboard";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrg, setSelectedOrg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  //Fetch organizations on load
+  useEffect(() => {
+    setIsLoading(true);
+    Cookies.remove("selected_org");
+    api
+      .get("/organizations/")
+      .then((res) => {
+        console.log(res.data)
+        const orgData = res.data || [];
+        setOrganizations(orgData);
+      })
+      .catch((err) => {
+        console.error("Failed to load organizations", err);
+        setError("Failed to load organizations");
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  const handleSelectOrg = (e) => {
+    const slug = e.target.value;
+    setSelectedOrg(slug);
+    Cookies.set("selected_org", slug);
+  };
+
+  const handleResetOrg = () => {
+    Cookies.remove("selected_org");
+    setSelectedOrg("");
+  };
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      {/* Global Notification Container */}
+      <Toaster position="top-right" />
 
-      <div className="ticks"></div>
+      {/* Global Loading State Wrapper*/}
+      <div
+        className={`max-w-7xl mx-auto p-4 sm:p-8 font-sans min-h-screen text-gray-900 transition-opacity duration-300 ${
+          isLoading
+            ? "opacity-50 pointer-events-none select-none"
+            : "opacity-100"
+        }`}
+      >
+        <header className="bg-gray-100 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 border-b border-gray-200 pb-5 gap-4 rounded-lg">
+          <div>
+            <h1 className="m-0 text-3xl font-extrabold text-blue-900 tracking-tight">
+              CapitalMatch
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Automated Ledger Reconciliation
+            </p>
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+          {/* Organization Selector */}
+          <div className="w-full sm:w-auto">
+            {!selectedOrg ? (
+              <div className="flex items-center gap-3">
+                <select
+                  onChange={handleSelectOrg}
+                  defaultValue=""
+                  disabled={isLoading}
+                  className="w-full sm:w-64 px-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+                  <option value="" disabled>
+                    Select Organization
+                  </option>
+                  {organizations.map((org) => (
+                    <option key={org.slug} value={org.slug}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-2 px-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="font-medium text-sm text-gray-700">
+                    {selectedOrg}
+                  </span>
+                </div>
+                <button
+                  onClick={handleResetOrg}
+                  className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium rounded-md text-xs border border-gray-200 transition-colors cursor-pointer shadow-sm"
                 >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+                  Switch
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+        {/* Main Content */}
+        {!selectedOrg ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Welcome to CapitalMatch
+            </h2>
+            <p className="text-gray-500 max-w-md">
+              Please select an organization from the dropdown above to view
+              ledgers and import bank statements.
+            </p>
+          </div>
+        ) : (
+          <main className="space-y-8 animate-fade-in-up">
+            <UploadSection
+              onUploadSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+            />
+            <Dashboard refreshTrigger={refreshTrigger} />
+          </main>
+        )}
+      </div>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
