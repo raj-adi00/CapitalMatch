@@ -78,3 +78,5 @@ VITE_API_BASE_URL=http://127.0.0.1:8000/api
 
 ## Add Ons
 * Pagination and filters
+
+# I completed this assessment without using AI assistance.
