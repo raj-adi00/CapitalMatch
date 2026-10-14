@@ -89,7 +89,7 @@ class ApproveMatchView(APIView):
             return Response({"error": "Match not found."}, status=404)
 
         if match.transaction.status == 'reconciled':
-            return Response({"error": "This transaction has already been reconciled."}, status=400)
+            return Response({"error": "This transaction has already been reconciled."}, status=409)
 
         if match.transaction.amount > match.line_item.amount_remaining:
             return Response({
